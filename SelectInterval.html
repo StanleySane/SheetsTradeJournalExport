@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <script>
+    var sheetName = "<?= sheetName ?>";
+    var exportInterval;
+
+    // Prevent forms from submitting.
+    function preventFormSubmit() {
+      var forms = document.querySelectorAll('form');
+      for (var i = 0; i < forms.length; i++) {
+        forms[i].addEventListener('submit', function(event) {
+          event.preventDefault();
+        });
+      }
+    }
+    window.addEventListener('load', preventFormSubmit);
+
+    function onSelectRowChange(select) {
+      google.script.run.activateRow(sheetName, select.value);
+    }
+
+    function onSuccessFormSubmit(exportConfig) {
+      console.log(exportConfig); // TODO temp
+
+      stopExportInterval();
+  
+      if (exportConfig.startExport) {
+        google.script.run.startExport(exportConfig.sheetName, exportConfig.firstRow, exportConfig.lastRow, exportConfig.stateId);
+
+        startExportInterval(exportConfig.stateId);
+      }
+      else {
+        enableForm();
+      }
+    }
+
+    function disableForm() {
+      const waitNotion = document.getElementById("wait-notion");
+      const editableElements = document.querySelectorAll("select, input");
+
+      showElement(waitNotion);
+
+      editableElements.forEach((elem) => {
+        elem.disabled = true;
+      });
+    }
+
+    function enableForm() {
+      const waitNotion = document.getElementById("wait-notion");
+      const editableElements = document.querySelectorAll("select, input");
+
+      hideElement(waitNotion);
+
+      editableElements.forEach((elem) => {
+        elem.removeAttribute("disabled");
+      });
+    }
+
+    function showElement(element) {
+      element.classList.remove('invisible');
+    }
+
+    function hideElement(element) {
+      element.classList.add('invisible');
+    }
+
+    function onSuccessExportProgress(state) {
+      const progressMsg = document.getElementById("progress-msg");
+      const progress = document.getElementById("progress");
+
+      if (!state) {
+        // TODO show error
+        console.error("State not found");
+
+        hideElement(progressMsg);
+        hideElement(progress);
+
+        return;
+      }
+
+      showElement(progressMsg);
+      progressMsg.innerHTML = state.msg;
+
+      if (state.prc) {
+        const progressBar = document.getElementById("progress-bar");
+
+        progress.setAttribute("aria-valuenow", state.prc);
+        progressBar.innerHTML = `${state.prc}%`;
+        progressBar.style.width = `${state.prc}%`;
+
+        showElement(progress);
+      }
+      else {
+        hideElement(progress);
+      }
+
+      if (state.finished) {
+        hideElement(progressMsg);
+        hideElement(progress);
+
+        enableForm();
+        
+        console.log("Progress finished");
+        return;
+      }
+
+      startExportInterval(state.stateId);
+    }
+
+    function askExportProgress(stateId) {
+      stopExportInterval();
+
+      //console.log(`Ask ${stateId}`);
+
+      google.script.run
+        .withSuccessHandler(onSuccessExportProgress)
+        .getCurrentState(stateId);
+    }
+
+    function startExportInterval(stateId) {
+      exportInterval = setInterval(() => askExportProgress(stateId), 1000);
+    }
+
+    function stopExportInterval() {
+      if (exportInterval) {
+        clearInterval(exportInterval);
+      }
+    }
+
+    function handleFormSubmit(formObject) {
+      const progressMsg = document.getElementById("progress-msg");
+      const progress = document.getElementById("progress");
+
+      hideElement(progressMsg);
+      hideElement(progress);
+
+      let stateId = crypto.randomUUID();
+      console.log(`New export state ID = ${stateId}`);
+      document.getElementById("stateId").value = stateId;
+
+      google.script.run
+        .withSuccessHandler(onSuccessFormSubmit)
+        .processExportForm(formObject);
+
+      disableForm();
+    }
+
+    function handleChooseAnotherSheet() {
+      google.script.run.showSelectSheetToExport(sheetName);
+      disableForm();
+    }
+
+  </script>    
+  </head>
+  <body>
+    <form onsubmit="handleFormSubmit(this)">
+      <input type="hidden" name="sheetName" value="<?= sheetName ?>" />
+      <input type="hidden" id="stateId" name="stateId" value="" />
+
+      <div class="container">
+        <div class="row pt-3">
+          <div class="col">
+            <h5>Sheet "<?= sheetName ?>"</h5>
+          </div>
+        </div>
+
+        <div class="row pt-4">
+          <label for="firstRow">Select first date to export:</label>
+          <div class="col">
+            <select class="form-select" name="firstRow" onchange="onSelectRowChange(this)">
+              <? for (var i = 0; i < availableRows.length; i++) { ?>
+                <?
+                  var rowData = availableRows[i];
+                  var dateAsString = rowData.date.toLocaleDateString("ru-RU", {year: 'numeric', month: 'long', day: '2-digit'});
+                  var selectText = `${dateAsString} (row ${rowData.firstRowNum})`;
+                ?>
+                <option value="<?= rowData.firstRowNum ?>"><?= selectText ?></option>
+              <? } ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="row pt-3">
+          <label for="lastRow">Select last date to export:</label>
+          <div class="col">
+            <select class="form-select" name="lastRow" onchange="onSelectRowChange(this)">
+              <? for (var i = 0; i < availableRows.length; i++) { ?>
+                <?
+                  var rowData = availableRows[i];
+                  var dateAsString = rowData.date.toLocaleDateString("ru-RU", {year: 'numeric', month: 'long', day: '2-digit'});
+                  var selectText = `${dateAsString} (row ${rowData.lastRowNum})`;
+                ?>
+                <option value="<?= rowData.lastRowNum ?>"><?= selectText ?></option>
+              <? } ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="row pt-4">
+          <div class="col">
+            <input type="submit" class="btn btn-primary" value="Export" />
+            <input type="button" class="btn btn-secondary float-end" value="Choose another sheet" onclick="handleChooseAnotherSheet()" />
+          </div>
+        </div>
+
+        <div class="row pt-3">
+          <div class="col">
+            <hr/>
+            <div id="wait-notion" class="text-center text-secondary invisible">Please wait...</div>
+          </div>
+        </div>
+
+        <div class="row pt-3">
+          <div class="col">
+            <div id="progress-msg" class="invisible"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <div id="progress" class="progress invisible" role="progressbar" aria-label="Export progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div id="progress-bar" class="progress-bar" style="width: 0%">0%</div>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- container -->
+    </form>
+    
+  </body>
+</html>

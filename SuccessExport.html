@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="row pt-3">
+        <h4>File <code><a href="<?= fileLink ?>"><?= fileName ?></a></code> successfuly created</h4>
+      </div>
+      <div class="row pt-3">
+        <p>See it in <a href="<?= folderLink ?>">Folder</a></p>
+      </div>
+
+      <div class="row pt-4">
+        <div class="col-6">
+          <input type="button" class="btn btn-primary" value="Close" onclick="google.script.host.close()" />
+        </div>
+      </div>
+    </div>
+
+  </body>
+</html>

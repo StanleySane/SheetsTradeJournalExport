@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <script>
+    // Prevent forms from submitting.
+    function preventFormSubmit() {
+      var forms = document.querySelectorAll('form');
+      for (var i = 0; i < forms.length; i++) {
+        forms[i].addEventListener('submit', function(event) {
+          event.preventDefault();
+        });
+      }
+    }
+    window.addEventListener('load', preventFormSubmit);
+
+    function showElement(element) {
+      element.classList.remove('invisible');
+    }
+
+    function hideElement(element) {
+      element.classList.add('invisible');
+    }
+
+    function disableForm() {
+      const waitNotion = document.getElementById("wait-notion");
+      const editableElements = document.querySelectorAll("select, input");
+
+      showElement(waitNotion);
+
+      editableElements.forEach((elem) => {
+        elem.disabled = true;
+      });
+    }
+
+    function enableForm() {
+      const waitNotion = document.getElementById("wait-notion");
+      const editableElements = document.querySelectorAll("select, input");
+
+      hideElement(waitNotion);
+
+      editableElements.forEach((elem) => {
+        elem.removeAttribute("disabled");
+      });
+    }
+
+    function onSelectChange(select) {
+      google.script.run.activateSheet(select.value);
+    }
+
+    function handleFormSubmit(formObject) {
+      google.script.run.processSelectSheetForm(formObject);
+      disableForm();
+    }
+  </script>    
+  </head>
+  <body>
+    <form onsubmit="handleFormSubmit(this)">
+      <div class="container">
+        <div class="row pt-3">
+          <h5>Select sheet to export:</h5>
+          <div class="col">
+            <? var sheetNames = Array.from(getThisTradeSheetsConfig().sheets, (item) => item.sheetName); ?>
+            <select class="form-select" name="sheet" onchange="onSelectChange(this)">
+              <? for (var i = 0; i < sheetNames.length; i++) { ?>
+                <? var selected = sheetNames[i] === initialSheetName ? "selected" : ""; ?>
+                <option value="<?= sheetNames[i] ?>" <?= selected ?>><?= sheetNames[i] ?></option>
+              <? } ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="row pt-4">
+          <div class="col-6">
+            <input type="submit" class="btn btn-primary" value="Continue" />
+          </div>
+        </div>
+
+        <div class="row pt-3">
+          <div class="col">
+            <hr/>
+            <div id="wait-notion" class="text-center text-secondary invisible">Please wait...</div>
+          </div>
+        </div>
+      </div>
+    </form>
+    
+  </body>
+</html>
