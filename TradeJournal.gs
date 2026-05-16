@@ -129,7 +129,7 @@ function getCsvFromTradeSheet(sheet, startRow, endRow, config, delimiter, state)
   var dataToExport = [];
   for (var row = startRow; row <= endRow; row++) {
     state.msg = `Export row ${row}`;
-    state.prc = Math.trunc((row + 1) * 100.0 / stepsCount);
+    state.prc = Math.trunc((row - startRow + 1) * 100.0 / stepsCount);
     propagateState(state, cache);
 
     // entire row
